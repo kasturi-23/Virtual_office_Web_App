@@ -11,14 +11,13 @@ import { update as updateAllCharactersData } from './slices/allCharactersSlice';
 function MyCharacter({ myCharactersData, loadCharacter, updateAllCharactersData, webrtcSocket }) {
     const context = useContext(CanvasContext);
 
-    // ✅ Ensure there's a default position to prevent "undefined" errors
+    
     const initialPosition = myCharactersData?.position || { x: 5, y: 5 };
     const [position, setPosition] = useState(initialPosition);
 
-    // ✅ Initialize Character Data
     useEffect(() => {
         if (!webrtcSocket || !webrtcSocket.id) {
-            console.warn("⚠️ WebRTC Socket not available.");
+            console.warn(" Socket not available.");
             return;
         }
 
@@ -33,7 +32,7 @@ function MyCharacter({ myCharactersData, loadCharacter, updateAllCharactersData,
         updateAllCharactersData(users);
     }, [webrtcSocket, updateAllCharactersData]);
 
-    // ✅ Handle WASD Movement
+    // Handle WASD Movement
     useEffect(() => {
         const handleKeyDown = (event) => {
             setPosition((prev) => {
@@ -67,16 +66,16 @@ function MyCharacter({ myCharactersData, loadCharacter, updateAllCharactersData,
         };
     }, []);
 
-    // ✅ Draw Character on Canvas
+    
     useEffect(() => {
         if (!context || !position) {
-            console.warn("⚠️ Canvas context or position is undefined.");
+            console.warn("Canvas context or position is undefined.");
             return;
         }
 
         const characterImg = document.querySelector(`#character-sprite-img-${MY_CHARACTER_INIT_CONFIG.characterClass}`);
         if (!characterImg) {
-            console.warn("⚠️ Character sprite image not found.");
+            console.warn("Character sprite image not found.");
             return;
         }
 
@@ -99,7 +98,7 @@ function MyCharacter({ myCharactersData, loadCharacter, updateAllCharactersData,
     return null;
 }
 
-// ✅ Prevent "undefined position" error by setting a default value
+// Prevent "undefined position" error by setting a default value
 const mapStateToProps = (state) => {
     const myCharacter = state.allCharacters.users[MY_CHARACTER_INIT_CONFIG.id];
     return { myCharactersData: myCharacter || { position: { x: 5, y: 5 } } };
