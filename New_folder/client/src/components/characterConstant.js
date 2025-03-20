@@ -11,7 +11,6 @@ export const CHARACTER_CLASSES_MAP = {
         spriteImage: 'assets/characters/characters.png',        
     },
 };
-
 export const MY_CHARACTER_INIT_CONFIG = {
     name: 'Amanda',
     id: uuid(),
