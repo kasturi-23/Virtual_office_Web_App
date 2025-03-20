@@ -3,7 +3,6 @@ import { io } from 'socket.io-client';
 
 import GameLoop from './components/GameLoop';
 import Office from './components/Office';
-
 import './App.css';
 
 const WEBRTC_SOCKET = io('http://localhost:8080');
