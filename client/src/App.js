@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 
 import GameLoop from './components/GameLoop';
 import Office from './components/Office';
-
 import './App.css';
 import { io } from 'socket.io-client';
 
@@ -15,17 +14,17 @@ function App() {
   });
   return (
     <>
-        <header>        
-        </header>
-        {socketConnected &&
-          <main class="content">
-              <GameLoop>
-                <Office webrtcSocket={WEBRTC_SOCKET}/>
-              </GameLoop>
-          </main>
-        }
-        <footer>
-        </footer>
+      <header>
+      </header>
+      {socketConnected &&
+        <main class="content">
+          <GameLoop>
+            <Office webrtcSocket={WEBRTC_SOCKET} />
+          </GameLoop>
+        </main>
+      }
+      <footer>
+      </footer>
     </>
   );
 }
