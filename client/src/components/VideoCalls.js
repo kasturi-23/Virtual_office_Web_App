@@ -1,115 +1,107 @@
 import React, { useEffect, useState } from 'react';
-import { connect } from 'react-redux';
 import MyVideo from './MyVideo';
 import InitiatedVideoCall from './InitiatedVideoCall';
 import ReceivedVideoCall from './ReceivedVideoCall';
+import { connect } from 'react-redux';
 import { MY_CHARACTER_INIT_CONFIG } from './characterConstants';
 
 function VideoCalls({ myCharacterData, otherCharactersData, webrtcSocket }) {
-  const [myStream, setMyStream] = useState(null);
-  const [offersReceived, setOffersReceived] = useState({});
+    const [myStream, setMyStream] = useState();
+    const [offersReceived, set0ffersReceived] = useState({});
 
-  // Get access to webcam/microphone
-  useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => setMyStream(stream))
-      .catch(err => console.error("Error accessing media devices:", err));
-  }, []);
+    useEffect(() => {
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then((stream) => {
+                setMyStream(stream);
+            })
+            .catch(err => {
+                console.error("Error accessing media devices:", err);
+            });
+    }, []);
 
-  // Handle incoming offers
-  useEffect(() => {
-    const handleOffer = (payload) => {
-      const { callFromUserSocketId, offerSignal } = payload;
-      console.log("Received offer from", callFromUserSocketId, "Payload:", payload);
+    useEffect(() => {
+        const handleReceiveOffer = (payload) => {
+            set0ffersReceived(prevOffers => {
+                if (!Object.keys(prevOffers).includes(payload.callFromUserSocketId)) {
+                    console.log("received offer from", payload.callFromUserSocketId, "with payload:", payload);
+                    return { ...prevOffers, [payload.callFromUserSocketId]: payload.offerSignal };
+                }
+                return prevOffers;
+            });
+        };
 
-      if (!offersReceived[callFromUserSocketId]) {
-        setOffersReceived(prev => ({
-          ...prev,
-          [callFromUserSocketId]: offerSignal,
-        }));
-      }
-    };
+        webrtcSocket.on("receiveOffer", handleReceiveOffer);
 
-    webrtcSocket.on("receiveOffer", handleOffer);
+        // Clean up the listener on unmount:
+        return () => {
+            webrtcSocket.off("receiveOffer", handleReceiveOffer);
+        };
+    }, [webrtcSocket]);
 
-    return () => {
-      webrtcSocket.off("receiveOffer", handleOffer);
-    };
-  }, [offersReceived, webrtcSocket]);
 
-  // Don't proceed until socket ID is assigned
-  if (!myCharacterData?.socketId) {
-    return <div>Waiting for socket connection...</div>;
-  }
+    // Only proceed if we have a socket ID
+    if (!myCharacterData?.socketId) {
+        return <div>Waiting for socket connection...</div>;
+    }
 
-  const myUserId = myCharacterData.id;
+    const myUserId = myCharacterData?.id;
+    // Filter users to initiate calls to 
+    const initiateCallToUsers = Object.keys(otherCharactersData)
+        .filter((othersUserId) => othersUserId > myUserId && otherCharactersData[othersUserId].socketId)
+        .reduce((filteredObj, key) => {
+            filteredObj[key] = otherCharactersData[key];
+            return filteredObj;
+        }, {});
 
-  // Determine which users to initiate calls to
-  const initiateCallToUsers = Object.entries(otherCharactersData)
-    .filter(([userId, data]) => userId > myUserId && data.socketId)
-    .reduce((result, [key, val]) => {
-      result[key] = val;
-      return result;
-    }, {});
 
-  console.log("My socket ID:", myCharacterData.socketId);
-  console.log("Initiating calls to:", Object.keys(initiateCallToUsers).map(id => initiateCallToUsers[id].socketId));
 
-  return (
-    <div className="videos">
-      {/* Local video */}
-      <MyVideo myStream={myStream} />
+    console.log("My socket ID:", myCharacterData.socketId);
+    console.log("Initiating calls to:", Object.keys(initiateCallToUsers).map(id => otherCharactersData[id].socketId));
 
-      {/* Outgoing calls */}
-      {Object.keys(initiateCallToUsers).map(userId => (
-        <InitiatedVideoCall
-          key={initiateCallToUsers[userId].socketId}
-          mySocketId={myCharacterData.socketId}
-          myStream={myStream}
-          othersSocketId={initiateCallToUsers[userId].socketId}
-          webrtcSocket={webrtcSocket}
-        />
-      ))}
+    return <>{
+        myCharacterData && <div className="videos">
+            <MyVideo myStream={myStream} />
 
-      {/* Incoming calls */}
-      {Object.keys(offersReceived).map(othersSocketId => {
-        const matchingUserIds = Object.keys(otherCharactersData)
-          .filter(userId => otherCharactersData[userId].socketId === othersSocketId);
+            {/* Initiated calls */}
+            {Object.keys(initiateCallToUsers).map((othersUserId) => {
+                return <InitiatedVideoCall
+                    key={initiateCallToUsers[othersUserId].socketId}
+                    mySocketId={myCharacterData.socketId}
+                    myStream={myStream}
+                    othersSocketId={initiateCallToUsers[othersUserId].socketId}
+                    webrtcSocket={webrtcSocket}
+                />
+            })}
 
-        console.assert(
-          matchingUserIds.length === 1,
-          "Unexpected list of matching user ids",
-          matchingUserIds
-        );
-
-        return (
-          <ReceivedVideoCall
-            key={othersSocketId}
-            mySocketId={myCharacterData.socketId}
-            myStream={myStream}
-            othersSocketId={othersSocketId}
-            webrtcSocket={webrtcSocket}
-            offerSignal={offersReceived[othersSocketId]}
-          />
-        );
-      })}
-    </div>
-  );
+            {Object.keys(offersReceived).map((othersSocketId) => {
+                const matchingUserIds = Object.keys(otherCharactersData)
+                    .filter((otherUserId) => otherCharactersData[otherUserId].socketId === othersSocketId)
+                console.assert(
+                    matchingUserIds.length === 1,
+                    "Unexpected list of matching user ids",
+                    matchingUserIds
+                )
+                return <ReceivedVideoCall
+                    key={othersSocketId}
+                    mySocketId={myCharacterData.socketId}
+                    myStream={myStream}
+                    othersSocketId={othersSocketId}
+                    webrtcSocket={webrtcSocket}
+                    offerSignal={offersReceived[othersSocketId]} />
+            })}
+        </div>
+    }</>;
 }
 
 const mapStateToProps = (state) => {
-  const myCharacterData = state.allCharacters.users[MY_CHARACTER_INIT_CONFIG.id];
-  const otherCharactersData = Object.entries(state.allCharacters.users)
-    .filter(([id]) => id !== MY_CHARACTER_INIT_CONFIG.id)
-    .reduce((result, [id, user]) => {
-      result[id] = user;
-      return result;
-    }, {});
-
-  return {
-    myCharacterData,
-    otherCharactersData,
-  };
+    const myCharacterData = state.allCharacters.users[MY_CHARACTER_INIT_CONFIG.id];
+    const otherCharactersData = Object.keys(state.allCharacters.users)
+        .filter(id => id != MY_CHARACTER_INIT_CONFIG.id)
+        .reduce((filteredObj, key) => {
+            filteredObj[key] = state.allCharacters.users[key];
+            return filteredObj;
+        }, {});
+    return { myCharacterData: myCharacterData, otherCharactersData: otherCharactersData };
 };
 
-export default connect(mapStateToProps)(VideoCalls);
+export default connect(mapStateToProps, {})(VideoCalls);

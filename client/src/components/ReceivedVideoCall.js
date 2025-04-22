@@ -2,68 +2,61 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import Peer from 'simple-peer';
 
 function ReceivedVideoCall({ mySocketId, myStream, othersSocketId, webrtcSocket, offerSignal }) {
-  const peerRef = useRef(null);
-  const [remoteStream, setRemoteStream] = useState(null);
+    const peerRef = useRef();
+    const [remoteStream, setRemoteStream] = useState(null);
 
-  // Create a peer connection to handle an incoming call
-  const createPeerConnection = useCallback(() => {
-    const peer = new Peer({
-      initiator: false,
-      trickle: false,
-      stream: myStream,
-    });
+    const createPeer = useCallback((othersSocketId, mySocketId, myStream, webrtcSocket, offerSignal) => {
+        const peer = new Peer({
+            initiator: false,
+            trickle: false,
+            stream: myStream,
+        });
 
-    // Emit answer signal after receiving offer
-    peer.on('signal', (signal) => {
-      webrtcSocket.emit('sendAnswer', {
-        callFromUserSocketId: othersSocketId,
-        callToUserSocketId: mySocketId,
-        answerSignal: signal,
-      });
-    });
+        peer.on('signal', signal => {
+            webrtcSocket.emit('sendAnswer', {
+                callFromUserSocketId: mySocketId,    // Client 2’s own socket ID
+                callToUserSocketId: othersSocketId,   // Client 1’s socket ID (sender of the offer)
+                answerSignal: signal
+            });
+        });
+        
 
-    // Handle receiving the remote stream
-    peer.on('stream', (incomingStream) => {
-      setRemoteStream(incomingStream);
-    });
+        peer.on('stream', (stream) => {
+            setRemoteStream(stream);
+        });
 
-    // Signal the peer with the offer from the caller
-    peer.signal(offerSignal);
+        peer.signal(offerSignal);
+        return peer;
+    }, [myStream, webrtcSocket, offerSignal]);
 
-    return peer;
-  }, [myStream, mySocketId, othersSocketId, webrtcSocket, offerSignal]);
+    useEffect(() => {
+        peerRef.current = createPeer(othersSocketId, mySocketId, myStream, webrtcSocket, offerSignal);
 
-  useEffect(() => {
-    peerRef.current = createPeerConnection();
+        return () => {
+            if (peerRef.current) {
+                peerRef.current.destroy();
+            }
+        };
+    }, [mySocketId, myStream, othersSocketId, webrtcSocket, offerSignal]);
 
-    return () => {
-      if (peerRef.current) {
-        peerRef.current.destroy();
-        peerRef.current = null;
-      }
+    const setVideoNode = (videoNode) => {
+        if (videoNode && remoteStream) {
+            videoNode.srcObject = remoteStream;
+        }
     };
-  }, [createPeerConnection]);
 
-  // Attach remote stream to the video element
-  const attachStreamToVideo = (videoEl) => {
-    if (videoEl && remoteStream) {
-      videoEl.srcObject = remoteStream;
-    }
-  };
-
-  return (
-    <div className="received-video-container">
-      {remoteStream && (
-        <video
-          width="200"
-          autoPlay
-          playsInline
-          className="remote-video"
-          ref={attachStreamToVideo}
-        />
-      )}
-    </div>
-  );
+    return (
+        <>
+            {remoteStream && (
+                <video
+                    width="200px"
+                    ref={setVideoNode}
+                    autoPlay
+                    className="remote-video"
+                />
+            )}
+        </>
+    );
 }
 
 export default ReceivedVideoCall;
