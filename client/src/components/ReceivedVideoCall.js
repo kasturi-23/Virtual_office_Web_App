@@ -3,9 +3,10 @@ import Peer from 'simple-peer';
 
 function ReceivedVideoCall({ mySocketId, myStream, othersSocketId, webrtcSocket, offerSignal }) {
     const peerRef = useRef();
+    const videoRef = useRef(null); // Ref for the video element
     const [remoteStream, setRemoteStream] = useState(null);
 
-    const createPeer = useCallback((othersSocketId, mySocketId, myStream, webrtcSocket, offerSignal) => {
+    const createPeer = useCallback(() => {
         const peer = new Peer({
             initiator: false,
             trickle: false,
@@ -14,12 +15,11 @@ function ReceivedVideoCall({ mySocketId, myStream, othersSocketId, webrtcSocket,
 
         peer.on('signal', signal => {
             webrtcSocket.emit('sendAnswer', {
-                callFromUserSocketId: mySocketId,    // Client 2’s own socket ID
-                callToUserSocketId: othersSocketId,   // Client 1’s socket ID (sender of the offer)
+                callFromUserSocketId: mySocketId,
+                callToUserSocketId: othersSocketId,
                 answerSignal: signal
             });
         });
-        
 
         peer.on('stream', (stream) => {
             setRemoteStream(stream);
@@ -27,31 +27,32 @@ function ReceivedVideoCall({ mySocketId, myStream, othersSocketId, webrtcSocket,
 
         peer.signal(offerSignal);
         return peer;
-    }, [myStream, webrtcSocket, offerSignal]);
+    }, [mySocketId, myStream, othersSocketId, offerSignal, webrtcSocket]);
 
     useEffect(() => {
-        peerRef.current = createPeer(othersSocketId, mySocketId, myStream, webrtcSocket, offerSignal);
+        peerRef.current = createPeer();
 
         return () => {
             if (peerRef.current) {
                 peerRef.current.destroy();
             }
         };
-    }, [mySocketId, myStream, othersSocketId, webrtcSocket, offerSignal]);
+    }, [createPeer]);
 
-    const setVideoNode = (videoNode) => {
-        if (videoNode && remoteStream) {
-            videoNode.srcObject = remoteStream;
+    useEffect(() => {
+        if (videoRef.current && remoteStream) {
+            videoRef.current.srcObject = remoteStream;
         }
-    };
+    }, [remoteStream]);
 
     return (
         <>
             {remoteStream && (
                 <video
+                    ref={videoRef}
                     width="200px"
-                    ref={setVideoNode}
                     autoPlay
+                    playsInline
                     className="remote-video"
                 />
             )}
