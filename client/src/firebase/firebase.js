@@ -23,7 +23,7 @@ const firebaseConfig = {
   messagingSenderId: process.env.REACT_APP_messagingSenderId,
   appId: process.env.REACT_APP_appId,
   measurementId: process.env.REACT_APP_measurementId,
-  databaseURL: "https://vo-feature-for-rt-default-rtdb.firebaseio.com/",
+  databaseURL: "https://virtual-office-project-3978d-default-rtdb.firebaseio.com",
 };
 
 // Initialize Firebase
