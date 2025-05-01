@@ -91,12 +91,6 @@ The project was developed as part of an 8-week fellowship focused on learning re
 
 ---
 
-## 🧩 Folder Structure
-
-> *[Add folder structure here]*
-
----
-
 ## 🌐 System Architecture Overview
 
 ```
